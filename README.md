@@ -1,5 +1,7 @@
 # notMNIST-TensorFlow
 
+Written in Python 3
+
 The following files will be my attempt at using TensorFlow on the notMNIST dataset for classification.
 I will be attempting to use a ConvNet with varying regularization techniques (e.g. dropout, smallish max weights)
 
