@@ -1,8 +1,14 @@
 #This file is all about merging and pruning the datasets into one
 
 import normalize_data_basic
-import extract_MNIST
-import download_MNIST
+import extract_notMNIST
+import download_notMNIST
+import numpy as np
+from six.moves import cPickle as pickle
+import hashlib
+
+image_size = 28
+pixel_depth = 255.0
 
 def make_arrays(nb_rows, img_size):
     if nb_rows:
@@ -58,37 +64,41 @@ def merge_datasets(pickle_files, train_size, valid_size = 0):
     return valid_dataset, valid_labels, train_dataset, train_labels
 
 
-train_size = 200000
-valid_size = 10000
-test_size = 10000
+def prune_datasets(train_dataset, train_labels, test_dataset, test_labels, valid_dataset, valid_labels):
+    #This is to ensure that there is no overlapping of any of the datasets
+    #
+    #To do this we will use the hashlib module
 
+    #Note that this method doesnt take into account that multiple things can output the same hash
+    train_hashes = [hashlib.sha1(x).digest() for x in train_dataset]
+    valid_hashes = [hashlib.sha1(x).digest() for x in valid_dataset]
+    test_hashes  = [hashlib.sha1(x).digest() for x in test_dataset]
+    
+    valid_in_train = np.in1d(valid_hashes,train_hashes)
+    test_in_train = np.in1d(test_hashes, train_hashes)
+    test_in_valid = np.in1d(test_hashes,valid_hashes)
+    
+    #We want to keep valid items if they're false in valid_in_train
+    #i.e, we keep things that are in valid_hashes but not in train_hashes
+    valid_keep = ~valid_in_train
+    #We will keep items in test that aren't in train and also not in valid
+    test_keep = ~(test_in_train | test_in_valid)
+    
+    #This method keeps the training set the largest
+    
+    cleaned_valid_dataset = valid_dataset[valid_keep]
+    cleaned_valid_labels = valid_labels[valid_keep]
+    cleaned_test_dataset = test_dataset[test_keep]
+    cleaned_test_labels = test_labels[test_keep]
+    
+    print("valid -> train overlap: %d samples" % valid_in_train.sum())
+    print("test  -> train overlap: %d samples" % test_in_train.sum())
+    print("test  -> valid overlap: %d samples" % test_in_valid.sum())
+    print()
+    print("Full dataset tensor of cleaned train dataset: ", train_dataset.shape)
+    print("Full dataset tensor of cleaned valid dataset: ", cleaned_valid_dataset.shape)
+    print("Full dataset tensor of cleaned test dataset: ", cleaned_test_dataset.shape)
 
-"""GETTING THE DATASET"""
-train_filename = download_notMNIST.download_attempt('notMNIST_large.tar.gz', download_notMNIST.LARGE_EXPECTED_BYTES)
-test_filename = download_notMNIST.download_attempt('notMNIST_small.tar.gz', download_notMNIST.SMALL_EXPECTED_BYTES)
+    return train_dataset, train_labels, cleaned_valid_dataset, cleaned_valid_labels, cleaned_test_dataset , cleaned_test_labels
 
-train_folders = extract_notMNIST.extract_attempt(train_filename, force = False)
-test_folders = extract_notMNIST.extract_attempt(test_filename, force = False)
-
-train_datasets = maybe_pickle(train_folders,45000)
-test_datasets = maybe_pickle(test_folders,1800)
-
-
-valid_dataset, valid_labels, train_dataset, train_labels = merge_datasets(
-  train_datasets, train_size, valid_size)
-##We won't use any validation set on the testing datasets
-_, _, test_dataset, test_labels = merge_datasets(test_datasets, test_size)
-
-print('Training:', train_dataset.shape, train_labels.shape)
-print('Validation:', valid_dataset.shape, valid_labels.shape)
-print('Testing:', test_dataset.shape, test_labels.shape)
-
-def randomize(dataset, labels):
-    permutation = np.random.permutation(labels.shape[0])
-    shuffled_dataset = dataset[permutation,:,:]
-    shuffled_labels = labels[permutation]
-    return shuffled_dataset, shuffled_labels
-
-train_dataset, train_labels = randomize(train_dataset, train_labels)
-test_dataset, test_labels = randomize(test_dataset, test_labels)
-valid_dataset, valid_labels = randomize(valid_dataset, valid_labels)
+    
