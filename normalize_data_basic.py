@@ -61,6 +61,7 @@ def maybe_pickle(data_folders,min_num_images_per_class, force = False):
 
     return dataset_names
 
+"""
 train_filename = download_notMNIST.download_attempt('notMNIST_large.tar.gz', download_notMNIST.LARGE_EXPECTED_BYTES)
 test_filename = download_notMNIST.download_attempt('notMNIST_small.tar.gz', download_notMNIST.SMALL_EXPECTED_BYTES)
 
@@ -68,4 +69,4 @@ train_folders = extract_notMNIST.extract_attempt(train_filename, force = False)
 test_folders = extract_notMNIST.extract_attempt(test_filename, force = False)
 
 train_datasets = maybe_pickle(train_folders,45000)
-test_datasets = maybe_pickle(test_folders,1800)
+test_datasets = maybe_pickle(test_folders,1800)"""
